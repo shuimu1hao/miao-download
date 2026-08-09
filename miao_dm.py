@@ -49,6 +49,7 @@ def rpc(method, params=None):
     return data.get("result")
 
 
+# rpc_alive: 探测 aria2 JSON-RPC 是否存活。
 def rpc_alive():
     try:
         rpc("aria2.getVersion")
@@ -57,6 +58,7 @@ def rpc_alive():
         return False
 
 
+# ensure_aria2: 确保 aria2 已以后台 RPC 模式启动（无则拉起）。
 def ensure_aria2():
     """aria2 RPC 没活着就拉起一个后台实例"""
     if rpc_alive():
@@ -88,11 +90,13 @@ def ensure_aria2():
     raise RuntimeError("aria2 RPC 启动失败")
 
 
+# safe_filename: 文件名安全化（去掉非法字符）。
 def safe_filename(name):
     name = re.sub(r'[\\/:*?"<>|]', "_", name).strip()
     return name or None
 
 
+# notify_done: 下载完成时发系统通知。
 def notify_done(filename):
     """下载完成弹通知（termux-api 可用时）"""
     if not os.path.exists(NOTIFY) or not filename:
@@ -113,6 +117,7 @@ _KEYS = [
 ]
 
 
+# _clean: 内部工具：清理/规范化文本。
 def _clean(t):
     try:
         total = int(t.get("totalLength") or 0)
@@ -135,6 +140,7 @@ def _clean(t):
     }
 
 
+# get_tasks: 获取当前任务列表（状态/进度/速度）。
 def get_tasks():
     """合并 active / waiting / stopped 三区任务"""
     tasks = []
@@ -161,6 +167,7 @@ def get_tasks():
     return {"tasks": uniq, "global_speed": gspeed}
 
 
+# add_task: 添加下载任务（URL + 可选保存目录）。
 def add_task(url, out=None):
     # 每个任务显式指定下载目录，避免 aria2 常驻进程仍用旧 --dir
     opts = {"dir": DOWNLOAD_DIR}
@@ -170,6 +177,7 @@ def add_task(url, out=None):
     return gid
 
 
+# action: 任务操作（暂停/继续/删除）。
 def action(gid, act):
     if act == "pause":
         rpc("aria2.pause", [gid])
@@ -194,12 +202,14 @@ def action(gid, act):
         raise RuntimeError("未知操作: %s" % act)
 
 
+# set_limit: 设置下载速度上限（KB/s）。
 def set_limit(kbs):
     """kbs <= 0 表示不限速"""
     val = "0" if kbs <= 0 else "%dK" % kbs
     rpc("aria2.changeGlobalOption", [{"max-overall-download-limit": val}])
 
 
+# get_limit: 查询当前速度上限。
 def get_limit():
     try:
         opts = rpc("aria2.getGlobalOption") or {}
@@ -289,6 +299,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"error": str(e)}, 500)
 
 
+# main: 程序入口（启动 HTTP 服务，提供网页 GUI + API）。
 def main():
     try:
         ensure_aria2()
