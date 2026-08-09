@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>喵下载</title>
+<style>
+  :root {
+    --bg: #14171f;
+    --card: #1e232f;
+    --card2: #252b3a;
+    --line: #323a4d;
+    --text: #e6e9f0;
+    --dim: #8b93a7;
+    --accent: #ff8ab3;
+    --accent2: #7cb8ff;
+    --green: #5dd39e;
+    --red: #ff6b6b;
+    --yellow: #ffd166;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+    padding: 16px;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .header h1 {
+    font-size: 22px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header .sub { color: var(--dim); font-size: 12px; }
+  .addbar {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .row { display: flex; gap: 8px; }
+  input {
+    flex: 1;
+    background: var(--card2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: 14px;
+    outline: none;
+  }
+  input:focus { border-color: var(--accent); }
+  button {
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: filter .15s;
+  }
+  button:hover { filter: brightness(1.15); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .btn-add { background: linear-gradient(135deg, var(--accent), #ff5c9a); color: #fff; }
+  .btn-mini {
+    padding: 5px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+    background: var(--card2);
+    color: var(--dim);
+    border: 1px solid var(--line);
+  }
+  .btn-mini:hover { color: var(--text); }
+  .btn-pause { background: var(--yellow); color: #241c00; }
+  .btn-resume { background: var(--green); color: #00281a; }
+  .btn-del { background: var(--red); color: #fff; }
+  .stats {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 12px;
+    color: var(--dim);
+    font-size: 13px;
+  }
+  .stats b { color: var(--green); font-size: 16px; }
+  .speedbox { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  .speedbox input { width: 90px; padding: 6px 8px; font-size: 13px; }
+  .task {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .task-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .task-name {
+    font-size: 14px;
+    word-break: break-all;
+    flex: 1;
+  }
+  .status {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .st-active { background: #17344f; color: var(--accent2); }
+  .st-waiting { background: #3a3114; color: var(--yellow); }
+  .st-paused { background: #33203c; color: #d9a0ff; }
+  .st-complete { background: #13362a; color: var(--green); }
+  .st-error { background: #3a1717; color: var(--red); }
+  .st-removed { background: #2a2f3d; color: var(--dim); }
+  .bar {
+    height: 6px;
+    background: var(--card2);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .bar-inner {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 999px;
+    transition: width .6s;
+  }
+  .task-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--dim);
+  }
+  .task-err { color: var(--red); font-size: 12px; margin-top: 6px; word-break: break-all; }
+  .empty { text-align: center; color: var(--dim); padding: 40px 0; font-size: 14px; }
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2b3142;
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s;
+    z-index: 99;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🐱 喵下载</h1>
+  <span class="sub">IDM 风格 · 多线程 · 断点续传</span>
+</div>
+
+<div class="addbar">
+  <div class="row">
+    <input id="url" type="text" placeholder="粘贴下载链接 (http/https/ftp/磁力/种子...)">
+    <button class="btn-add" id="btnAdd">下载喵</button>
+  </div>
+  <div class="row">
+    <input id="out" type="text" placeholder="保存为（可选，留空用原名）">
+  </div>
+</div>
+
+<div class="stats">
+  <span>总速度 <b id="gSpeed">0 B/s</b></span>
+  <span>任务数 <b id="tCount">0</b></span>
+  <div class="speedbox">
+    <span>限速 KB/s</span>
+    <input id="limit" type="number" min="0" placeholder="0=不限">
+    <button class="btn-mini" id="btnLimit">设置</button>
+  </div>
+</div>
+
+<div id="tasks"></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+let toastTimer = null;
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function fmtSize(n) {
+  if (!n) return '0 B';
+  const u = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let i = 0;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return n.toFixed(n >= 100 || i === 0 ? 0 : 1) + ' ' + u[i];
+}
+
+function fmtSpeed(n) { return fmtSize(n) + '/s'; }
+
+const STATUS_MAP = {
+  active:   ['下载中', 'st-active'],
+  waiting:  ['排队中', 'st-waiting'],
+  paused:   ['已暂停', 'st-paused'],
+  complete: ['已完成', 'st-complete'],
+  error:    ['出错啦', 'st-error'],
+  removed:  ['已移除', 'st-removed'],
+};
+
+function taskCard(t) {
+  const [label, cls] = STATUS_MAP[t.status] || [t.status, 'st-removed'];
+  let buttons = '';
+  if (t.status === 'active') {
+    buttons += `<button class="btn-mini btn-pause" onclick="doAct('${t.gid}','pause')">⏸ 暂停</button>`;
+  } else if (t.status === 'paused' || t.status === 'waiting') {
+    buttons += `<button class="btn-mini btn-resume" onclick="doAct('${t.gid}','resume')">▶ 继续</button>`;
+  }
+  if (t.status !== 'complete') {
+    buttons += `<button class="btn-mini btn-del" onclick="doAct('${t.gid}','remove')">🗑 删除</button>`;
+  }
+  const size = t.total ? `${fmtSize(t.done)} / ${fmtSize(t.total)}` : fmtSize(t.done);
+  const pct = t.progress.toFixed(1);
+  return `
+  <div class="task">
+    <div class="task-head">
+      <span class="task-name">${t.name.replace(/</g, '&lt;')}</span>
+      <span class="status ${cls}">${label}</span>
+    </div>
+    <div class="bar"><div class="bar-inner" style="width:${pct}%"></div></div>
+    <div class="task-meta">
+      <span>${size} · ${pct}%</span>
+      <span>${t.status === 'active' ? fmtSpeed(t.speed) : ''}</span>
+      <span>${buttons}</span>
+    </div>
+    ${t.error ? `<div class="task-err">⚠ ${t.error.replace(/</g, '&lt;')}</div>` : ''}
+  </div>`;
+}
+
+async function refresh() {
+  try {
+    const r = await fetch('/api/tasks');
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    $('gSpeed').textContent = fmtSpeed(d.global_speed);
+    $('tCount').textContent = d.tasks.length;
+    $('tasks').innerHTML = d.tasks.length
+      ? d.tasks.map(taskCard).join('')
+      : '<div class="empty">还没有下载任务喵～ 粘贴个链接试试 (｡>ㅅ<｡)</div>';
+  } catch (e) {
+    $('tasks').innerHTML = `<div class="empty">连接后端失败：${e.message}</div>`;
+  }
+}
+
+async function api(path, body) {
+  const r = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const d = await r.json();
+  if (d.error) throw new Error(d.error);
+  return d;
+}
+
+$('btnAdd').onclick = async () => {
+  const url = $('url').value.trim();
+  if (!url) { toast('先粘贴链接嘛喵！'); return; }
+  const btn = $('btnAdd');
+  btn.disabled = true;
+  try {
+    await api('/api/add', { url, out: $('out').value.trim() });
+    $('url').value = '';
+    $('out').value = '';
+    toast('任务添加成功喵 (≧▽≦)');
+    refresh();
+  } catch (e) {
+    toast('添加失败：' + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+$('url').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnAdd').click(); });
+
+async function doAct(gid, act) {
+  try {
+    await api('/api/action', { gid, action: act });
+    refresh();
+  } catch (e) {
+    toast('操作失败：' + e.message);
+  }
+}
+
+$('btnLimit').onclick = async () => {
+  const v = parseInt($('limit').value, 10);
+  const kbs = isNaN(v) || v < 0 ? 0 : v;
+  try {
+    await api('/api/limit', { limit_kbs: kbs });
+    toast(kbs ? `限速 ${kbs} KB/s 喵` : '已取消限速喵');
+  } catch (e) {
+    toast('设置失败：' + e.message);
+  }
+};
+
+(async function init() {
+  try {
+    const r = await fetch('/api/limit');
+    const d = await r.json();
+    if (!d.error) $('limit').value = d.limit_kbs || '';
+  } catch (_) {}
+  refresh();
+  setInterval(refresh, 2000);
+})();
+</script>
+</body>
+</html>
